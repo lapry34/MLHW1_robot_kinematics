@@ -7,24 +7,32 @@ from envs.reacher_v6 import ReacherEnv
 from envs.reacher3_v6 import Reacher3Env
 from envs.marrtino_arm import MARRtinoArmEnv
 
-def print_header(njoints):
+def print_header(njoints, ndim):
     for i in range(njoints):
-        print(f"cos(j{i});")
+        print(f"j{i}; ", end="")
     for i in range(njoints):
-        print(f"sin(j{i});")
-    print("ee_x;ee_y;ee_qw;ee_qz")
+        print(f"cos(j{i}); ", end="")
+    for i in range(njoints):
+        print(f"sin(j{i}); ", end="")
+    if ndim==2:
+        print("ee_x; ee_y; ee_qw; ee_qz")
+    elif ndim==3:
+        print("ee_x; ee_y; ee_z; ee_qw; ee_qx; ee_qy; ee_qz")
 
-def print_obs(obs, njoints):
-    # cosx(j..), sin(j..)
+
+def print_obs(obs, njoints, ndim):
+    # j_i; cosx(j_i); sin(j_i)
     r = ""
-    for i in range(0,2*njoints):
+    for i in range(0,3*njoints):
         r = r + f"{obs[i]:6.3f}; "
-    # fingertip pos
-    for i in range(-4,-2):
-        r = r + f"{obs[i]:6.3f}; "
-    # fingertip quat
-    for i in range(-2,0):
-        r = r + f"{obs[i]:6.3f}; "
+    if ndim==2:
+        # fingertip pose  ee_x;ee_y;ee_qw;ee_qz
+        for i in range(-6,-2):
+            r = r + f"{obs[i]:6.3f}; "
+    elif ndim==3:
+        # fingertip pose  ee_x;ee_y;ee_z;ee_qw;ee_qx;ee_qy;ee_qz
+        for i in range(-10,-3):
+            r = r + f"{obs[i]:6.3f}; "
     print(r[0:-2])
 
 def dorun(args):
@@ -45,18 +53,18 @@ def dorun(args):
     #print(f"Action: {env.action_space}")
 
     if args.log:
-        print_header(env.njoints)
+        print_header(env.njoints, env.ndim)
 
     observation, info = env.reset(seed=args.seed)
     env.action_space.seed(seed=args.seed)
     if args.log:
-        print_obs(observation, env.njoints)
+        print_obs(observation, env.njoints, env.ndim)
 
     for _ in range(1,args.steps):
         action = env.action_space.sample()  # agent policy that uses the observation and info
         observation, reward, terminated, truncated, info = env.step(action)
         if args.log:
-            print_obs(observation, env.njoints)
+            print_obs(observation, env.njoints, env.ndim)
         if render_mode=="human":
             time.sleep(0.1)
         if terminated or truncated:

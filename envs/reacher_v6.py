@@ -192,6 +192,7 @@ class ReacherEnv(MujocoEnv, utils.EzPickle):
         )
 
         self.njoints = 2
+        self.ndim = 2
 
         self.metadata = {
             "render_modes": [

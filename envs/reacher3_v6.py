@@ -43,9 +43,7 @@ class Reacher3Env(MujocoEnv, utils.EzPickle):
     ):
 
         dd = dirname(getsourcefile(lambda:0))  # dir of this file
-        print(dd)
         xml_file = dd+"/assets/"+xml_file
-        print(xml_file)
 
         utils.EzPickle.__init__(
             self,
@@ -76,6 +74,7 @@ class Reacher3Env(MujocoEnv, utils.EzPickle):
         )
 
         self.njoints = 3
+        self.ndim = 2
 
         self.metadata = {
             "render_modes": [

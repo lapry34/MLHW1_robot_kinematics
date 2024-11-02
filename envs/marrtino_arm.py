@@ -19,9 +19,10 @@ class MARRtinoArmEnv(MujocoEnv, utils.EzPickle):
     The goal is to move the robot's end effector (called *fingertip*) close to a target that is spawned at a random position.
 
     ## Action Space
-    `Box(-inf, inf, (25,), float32)` - torques applied at the hinge joints
+    `Box(-inf, inf, (5,), float32)` - torques applied at the hinge joints
     
     ## Observation Space
+    - *qpos (5 elements)* - angles of the 5 joints
     - *cos(qpos) (5 elements)* - cosine of the angles of the 5 joints
     - *sin(qpos) (5 elements)* - sine of the angles of the 5 joints
     - *qvel (5 elements)* - angular velocities of the 5 joints
@@ -95,6 +96,8 @@ class MARRtinoArmEnv(MujocoEnv, utils.EzPickle):
         )
         
         self.njoints = 5
+        self.ndim = 3
+
         self.body_names = [self.data.model.body(i).name for i in range(0,self.data.model.nbody)]
         self.joint_names = [self.data.model.joint(i).name for i in range(0,self.data.model.njnt)]
 
