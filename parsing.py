@@ -41,8 +41,22 @@ def generate_dataset(noise, noise_percent):
                 # Extract last two characters of the filename for the new filename
                 new_filename = f"dataset_{filename[-6:-4]}.csv"  
                 combined_df.to_csv(os.path.join(output_dir, new_filename), index=False, sep=';')
+            else:
+                # Extract last two characters of the filename for the new filename
+                new_filename = f"dataset_{filename[-6:-4]}.csv"  
+                df.to_csv(os.path.join(output_dir, new_filename), index=False, sep=';')
 
 if __name__ == '__main__':
     os.makedirs(output_dir, exist_ok=True)  # Create the output directory if it doesn't exist
-    generate_dataset(noise=True, noise_percent=20)  # Generate the modified dataset
+
+    #read noise variable from terminal
+    noise = False
+    noise_percent = 0
+    
+    if len(sys.argv) > 1:
+            noise = True
+            noise_percent = int(sys.argv[1])
+    
+
+    generate_dataset(noise=noise, noise_percent=noise_percent)  # Generate the modified dataset
     sys.exit(0)
