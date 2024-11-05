@@ -7,8 +7,9 @@ import sys
 
 if __name__ == "__main__":
     
-    model = keras.models.load_model('model_r2.keras')
+    model = keras.models.load_model('model_r2_tuned.keras')
     print(model.summary())
+
 
     data = pd.read_csv('dataset/validation/r2.csv', delimiter=';')
     data.columns = data.columns.str.strip()  # Remove leading/trailing whitespace from column names
@@ -17,6 +18,7 @@ if __name__ == "__main__":
 
     # Split the data into X and Y
     X = data.drop(columns=target_values)
+    # X = X.drop(columns=['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)'])  # Remove the cos/sin columns
     Y = data[target_values]
 
     # evaluate model performance

@@ -7,7 +7,7 @@ import sys
 
 if __name__ == "__main__":
     
-    model = keras.models.load_model('model_r3.keras')
+    model = keras.models.load_model('model_r3_tuned.keras')
     print(model.summary())
 
     data = pd.read_csv('dataset/validation/r3.csv', delimiter=';')

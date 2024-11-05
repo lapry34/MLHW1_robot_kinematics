@@ -15,18 +15,20 @@ if __name__ == "__main__":
 
     # Split the data into X and Y
     X = data.drop(columns=target_values)
+    #X = X.drop(columns=['j0','j1','j2','j3','j4']) #remove the joint values
+    #X = X.drop(columns=['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)', 'cos(j2)', 'sin(j2)', 'cos(j3)', 'sin(j3)', 'cos(j4)', 'sin(j4)']) #remove the cos/sin
     Y = data[target_values]
 
     # Split the data into training and testing sets
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=1979543)
 
-    regularization_factor = 10e-5 #L2 regularization factor
+    regularization_factor = 10e-6 #L2 regularization factor
 
     # Create the model
     model = keras.Sequential([
-        keras.layers.Dense(64, input_shape=(X_train.shape[1],), activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
-        keras.layers.Dense(64, activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
-        keras.layers.Dense(64, activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
+        keras.layers.Dense(32, input_shape=(X_train.shape[1],), activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
+        keras.layers.Dense(32, activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
+        keras.layers.Dense(12, activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
         #keras.layers.Dropout(0.2),
         keras.layers.Dense(len(target_values))
     ])
@@ -43,17 +45,19 @@ if __name__ == "__main__":
     # Evaluate the model
     test_loss = model.evaluate(X_test, Y_test)
 
-    # Save the model
-    model.save('model_r5.keras')
-
-    # Print the test loss
-    print('Test Mean Squared Error:', test_loss) #mse impreciso valori < 1???
-    print('Test Root Mean Squared Error:', np.sqrt(test_loss)) 
-
-    #use mean percentage error
+    #predict
     Y_pred = model.predict(X_test)
     #round Y_pred to 3 decimal values
     Y_pred = np.round(Y_pred, 3)
+
+    # Save the model
+    model.save('model_r3.keras')
+
+    print("TEST:")
+
+    # Print the test loss
+    print('Mean Squared Error:', test_loss) #mse impreciso valori < 1???
+    print('Root Mean Squared Error:', np.sqrt(test_loss)) 
 
     # Print the MAE
     print('Mean Absolute Error:', np.mean(np.abs(Y_test - Y_pred)))
