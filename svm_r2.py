@@ -6,6 +6,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import root_mean_squared_error, mean_absolute_error
 from sklearn.multioutput import MultiOutputRegressor
 import sys
+from joblib import dump
 
 if __name__ == "__main__":
 
@@ -19,14 +20,21 @@ if __name__ == "__main__":
     X = data.drop(columns=target_values)    
     Y = data[target_values]
 
+    X = X.to_numpy()
+    Y = Y.to_numpy()
+
+
     # Split the data into training and testing sets
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=1979543)
 
-    validation_data = pd.read_csv('dataset/validation/r2.csv', delimiter=';')
-    validation_data.columns = validation_data.columns.str.strip()  # Remove leading/trailing whitespace from column names
+    val_data = pd.read_csv('dataset/validation/r2.csv', delimiter=';')
+    val_data.columns = val_data.columns.str.strip()  # Remove leading/trailing whitespace from column names
 
-    X_validation = validation_data.drop(columns=target_values)
-    Y_validation = validation_data[target_values]
+    X_val = val_data.drop(columns=target_values)
+    Y_val = val_data[target_values]
+
+    X_val = X_val.to_numpy()
+    Y_val = Y_val.to_numpy()
 
     # try to find the best hyperparameters but with fixed epsilon=0.03 and kernel=rbf
     svr = SVR(kernel='rbf', epsilon=0.03)
@@ -63,15 +71,21 @@ if __name__ == "__main__":
     print('Mean Absolute Error:', MAE)
 
     # Predict on validation set
-    Y_pred = clf.predict(X_validation)
+    Y_pred = clf.predict(X_val)
     Y_pred = np.round(Y_pred, 3)
 
     # Evaluate the model on validation set
-    RMSE = root_mean_squared_error(Y_validation, Y_pred)  # Calculate root mean squared error
-    MAE = mean_absolute_error(Y_validation, Y_pred)
+    RMSE = root_mean_squared_error(Y_val, Y_pred)  # Calculate root mean squared error
+    MAE = mean_absolute_error(Y_val, Y_pred)
 
     print("VALIDATION:")
     print('Root Mean Squared Error:', RMSE)
     print('Mean Absolute Error:', MAE)
+
+    #print the number of parameters of the SVM
+    print("Number of parameters: ", clf.estimators_[0].n_support_)
+
+    #save mode to file
+    dump(clf, 'svm_r2.joblib')
 
     sys.exit(0)

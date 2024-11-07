@@ -26,8 +26,8 @@ if __name__ == "__main__":
 
     # Create the model
     model = keras.Sequential([
-        keras.layers.Dense(64, input_shape=(X_train.shape[1],), activation='sigmoid', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
-        keras.layers.Dense(64, activation='sigmoid', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
+        keras.layers.Dense(64, input_shape=(X_train.shape[1],), activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
+        keras.layers.Dense(64, activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
         #keras.layers.Dense(16, activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
         #keras.layers.Dropout(0.2),
         keras.layers.Dense(len(target_values))
