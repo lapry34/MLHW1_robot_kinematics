@@ -97,9 +97,11 @@ if __name__ == "__main__":
     print('Root Mean Squared Error:', RMSE)
     print('Mean Absolute Error:', MAE)
 
-    #number of parameters of the SVM
-    print("estimators number: ", len(model.estimators_))
-    print("Number of parameters of the SVM: ", model.estimators_[0].n_support_)
+    # Print the number of support vectors
+    sv = 0
+    for estimator in model.estimators_:
+        sv += estimator.n_support_
+    print("Total support vectors: ", sum(sv))
 
     # Save the model
     dump(model, model_path)

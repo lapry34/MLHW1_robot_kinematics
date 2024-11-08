@@ -81,6 +81,11 @@ if __name__ == "__main__":
     # Load the trained model
     model = load(model_path)
 
+    # Print the number of support vectors
+    sv = 0
+    for estimator in model.estimators_:
+        sv += estimator.n_support_
+    print("Total support vectors: ", sum(sv))
     
     # get a random data point from the validation set
     idx = np.random.randint(0, X_val.shape[0])
@@ -88,7 +93,7 @@ if __name__ == "__main__":
     Y = Y_val[idx]
 
     max_iter = 10000
-    eta = 0.01
+    eta = 0.05
 
     # get the initial X
     X_i = X_val[0]
