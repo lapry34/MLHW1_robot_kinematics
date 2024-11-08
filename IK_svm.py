@@ -48,21 +48,21 @@ def compute_jacobian(model, X, epsilon=1e-5):
     n_outputs = len(model.estimators_)
     n_features = X.shape[0]
     jacobian = np.zeros((n_outputs, n_features))
-
-    # Compute output for the original input
-    original_output = model.predict(X.reshape(1, -1)).flatten()
     
-    # For each feature, compute the partial derivative for each output
+    # For each feature, compute the partial derivative for each output using central differences
     for i in range(n_features):
-        # Perturb the i-th feature by epsilon
-        X_perturbed = X.copy()
-        X_perturbed[i] += epsilon
+        # Perturb the i-th feature by epsilon in both directions
+        X_perturbed_plus = X.copy()
+        X_perturbed_minus = X.copy()
+        X_perturbed_plus[i] += epsilon
+        X_perturbed_minus[i] -= epsilon
         
-        # Predict with the perturbed input
-        perturbed_output = model.predict(X_perturbed.reshape(1, -1)).flatten()
+        # Predict with the perturbed inputs
+        perturbed_output_plus = model.predict(X_perturbed_plus.reshape(1, -1)).flatten()
+        perturbed_output_minus = model.predict(X_perturbed_minus.reshape(1, -1)).flatten()
         
-        # Calculate partial derivatives (finite differences)
-        jacobian[:, i] = (perturbed_output - original_output) / epsilon
+        # Calculate partial derivatives (finite central differences)
+        jacobian[:, i] = (perturbed_output_plus - perturbed_output_minus) / (2 * epsilon)
     
     return jacobian
 
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         if i % 100 == 0:
             print("Iteration: ", i, " Error: ", np.linalg.norm(error))
 
-        #check if the Jacobian is singular
+        #check if the Jacobian has full rank
         if np.linalg.matrix_rank(J) < J.shape[0]:
             X_i = X_i - eta * np.dot(J.T, error) # Gradient descent
         else:
