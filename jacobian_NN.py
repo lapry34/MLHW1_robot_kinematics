@@ -40,10 +40,11 @@ output_dim = None
 
 def FK(model, theta):
     #reshape to batch size 1
-    t = tf.reshape(theta, (1, input_dim)) #6 is the number of joints
+    t = tf.reshape(theta, (1, input_dim)) 
+    #predict
     out = model(t)
     #reshape to 1D vector
-    out = tf.reshape(out, (output_dim,)) #4 is the number of end effector position variables
+    out = tf.reshape(out, (output_dim,)) 
     return out
 
 @tf.function
@@ -67,16 +68,61 @@ if __name__ == "__main__":
     data.columns = data.columns.str.strip()  # Remove leading/trailing whitespace from column names
 
     # Split the data into X and Y
-    X = data.drop(columns=target_values)
-    Y = data[target_values]
+    X_val = data.drop(columns=target_values)
+    Y_val = data[target_values]
 
-    # Compute the jacobian in a random point in the dataset taking only the first two values
-    X_sample = X.sample(1)
+    max_iter = 10000
+    eta = 0.01
 
-    J_nn = jacobian(model, tf.constant(X_sample.values, dtype=tf.float32))
+    # get the initial X value as a generic row from the dataset
+    X_gen = X_val.iloc[0].values
+    X_i = X_gen
+    Y = Y_val.iloc[0].values
+    
+    # find iteratively X that provides the same Y
+    for i in range(max_iter):
 
-    print(J_nn.numpy())
+        # Compute the Jacobian of the model with respect to input X
+        J = jacobian(model, tf.constant(X_i, dtype=tf.float32))
+        
+        #convert J to numpy
+        J = J.numpy()
+
+        # Predict the output for the current X_i
+        X_i_tf = tf.constant(X_i.reshape(1, -1), dtype=tf.float32)
+        Y_pred = model.predict(X_i_tf, verbose=0).flatten()
+
+        # Compute the difference between predicted and actual values
+        error = Y_pred - Y 
+
+        if np.linalg.norm(error) < 10e-4:
+            print("Converged after ", i, " iterations.")
+            break
+
+        if i % 100 == 0:
+            print("Iteration: ", i, " Error: ", np.linalg.norm(error))
+
+        #check if the Jacobian has full rank
+        if np.linalg.matrix_rank(J) < J.shape[0]:
+            X_i = X_i - eta * (J.T @ error) # Gradient descent
+        else:
+            X_i = X_i -  eta * np.linalg.pinv(J) @ error # Newton's method
 
 
+
+
+    #compare the predicted and actual values
+    print("X: ", X_val.iloc[0].values)
+    print("X_i: ", X_i)
+
+    X_gen_tf = tf.constant(X_gen.reshape(1, -1), dtype=tf.float32)
+    X_i_tf = tf.constant(X_i.reshape(1, -1), dtype=tf.float32)
+
+    np.set_printoptions(suppress=True)
+    print("Predicted Y in X: ", model.predict(X_gen_tf, verbose=0).flatten())
+    print("Predicted Y in X_i: ", model.predict(X_i_tf, verbose=0).flatten())
+    print("Y: ", Y)
+
+    print("Error: %.5f " % np.linalg.norm(model.predict(X_i_tf, verbose=0) - Y))
 
     sys.exit(0)
