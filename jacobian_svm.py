@@ -95,8 +95,9 @@ if __name__ == "__main__":
     max_iter = 10000
     eta = 0.05
 
-    # get the initial X
-    X_i = X_val[0]
+    # get the initial X randomly
+    idx = np.random.randint(0, X_val.shape[0])
+    X_i = X_val[idx]
     
     # find iteratively X that provides the same Y
     for i in range(max_iter):

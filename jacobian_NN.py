@@ -72,13 +72,17 @@ if __name__ == "__main__":
     Y_val = data[target_values]
 
     max_iter = 10000
-    eta = 0.01
+    eta = 0.05
 
-    # get the initial X value as a generic row from the dataset
-    X_gen = X_val.iloc[0].values
-    X_i = X_gen
-    Y = Y_val.iloc[0].values
-    
+    # get a random data point from the validation set
+    idx = np.random.randint(0, X_val.shape[0])
+    X_gen = X_val.iloc[idx].values
+    Y = Y_val.iloc[idx].values
+
+    #initialize X_i randomly
+    idx = np.random.randint(0, X_val.shape[0])
+    X_i = X_val.iloc[idx].values
+
     # find iteratively X that provides the same Y
     for i in range(max_iter):
 
