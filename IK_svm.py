@@ -113,7 +113,7 @@ if __name__ == "__main__":
 
         #check if the Jacobian has full rank
         if np.linalg.matrix_rank(J) < J.shape[0]:
-            X_i = X_i - eta * np.dot(J.T, error) # Gradient descent
+            X_i = X_i - eta * (J.T @ error) # Gradient descent
         else:
             X_i = X_i -  eta * np.linalg.pinv(J) @ error # Newton's method
 
