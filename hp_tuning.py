@@ -7,6 +7,27 @@ from keras_tuner import Hyperband
 import sys
 import os
 
+#force tensorflow to use CPU
+tf.config.set_visible_devices([], 'GPU')
+
+robot = 'r5' # r3 or r5
+
+# Paths
+model_path = 'model_' + robot + '_tuned.keras'
+dataset_path = 'dataset/data/dataset_' + robot + '.csv'
+
+target_values = list()
+trigonometric_values = list()
+
+if robot == 'r2':
+    target_values = ['ee_x', 'ee_y', 'ee_qw', 'ee_qz']
+    trigonometric_values = ['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)']
+elif robot == 'r3':
+    target_values = ['ee_x', 'ee_y', 'ee_qw', 'ee_qz']
+    trigonometric_values = ['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)', 'cos(j2)', 'sin(j2)']
+elif robot == 'r5':
+    target_values = ['ee_x', 'ee_y', 'ee_z', 'ee_qw', 'ee_qx', 'ee_qy', 'ee_qz']
+    trigonometric_values = ['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)', 'cos(j2)', 'sin(j2)', 'cos(j3)', 'sin(j3)', 'cos(j4)', 'sin(j4)']
 
 # Function to build model for Keras Tuner
 def build_model(hp):
@@ -34,13 +55,12 @@ def build_model(hp):
 
 if __name__ == "__main__":
     # Load the data with specified delimiter and strip whitespace from column names
-    data = pd.read_csv('dataset/data/dataset_r2.csv', delimiter=';')
+    data = pd.read_csv(dataset_path, delimiter=';')
     data.columns = data.columns.str.strip()  # Remove leading/trailing whitespace from column names
-    target_values = ['ee_x', 'ee_y', 'ee_qw', 'ee_qz']
 
     # Split the data into X and Y
     X = data.drop(columns=target_values)
-    #X = X.drop(columns=['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)'])  # Remove the cos/sin columns
+    #X = X.drop(columns=trigonometric_values)  # Remove the cos/sin columns
     Y = data[target_values]
 
     # Split the data into training and testing sets
@@ -48,9 +68,9 @@ if __name__ == "__main__":
 
 
     # Remove previous tuner results if they exist
-    if os.path.exists('hyperband_tuning/robotic_arm_regression'):
+    if os.path.exists('hyperband_tuning/' + robot):
         import shutil
-        shutil.rmtree('hyperband_tuning/robotic_arm_regression')
+        shutil.rmtree('hyperband_tuning/' + robot)
 
     # Instantiate the tuner
     # Using Hyperband for efficient hyperparameter search
@@ -60,7 +80,7 @@ if __name__ == "__main__":
                     max_epochs=20,
                     factor=3,
                     directory='hyperband_tuning',
-                    project_name='robotic_arm_regression')
+                    project_name=robot)
 
     # Run the hyperparameter search
     tuner.search(X_train, Y_train, validation_split=0.2, epochs=20)
@@ -87,7 +107,7 @@ if __name__ == "__main__":
     y_pred = np.round(y_pred, 3)
 
     # Save the model
-    model.save('model_r2_tuned.keras')
+    model.save(model_path)
 
     print("TEST:")
 

@@ -4,6 +4,33 @@ from sklearn.svm import SVR
 from sklearn.multioutput import MultiOutputRegressor
 import sys
 from joblib import load
+import warnings
+
+# Suppress specific UserWarning
+warnings.filterwarnings("ignore", message="X does not have valid feature names")
+
+
+robot = 'r3' # r3 or r5
+
+# Paths
+model_path = 'svm_' + robot + '.joblib'
+
+# validation path for the robot
+validation_path = 'dataset/validation/' + robot + '.csv'
+
+target_values = list()
+trigonometric_values = list()
+
+if robot == 'r2':
+    target_values = ['ee_x', 'ee_y', 'ee_qw', 'ee_qz']
+    trigonometric_values = ['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)']
+elif robot == 'r3':
+    target_values = ['ee_x', 'ee_y', 'ee_qw', 'ee_qz']
+    trigonometric_values = ['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)', 'cos(j2)', 'sin(j2)']
+elif robot == 'r5':
+    target_values = ['ee_x', 'ee_y', 'ee_z', 'ee_qw', 'ee_qx', 'ee_qy', 'ee_qz']
+    trigonometric_values = ['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)', 'cos(j2)', 'sin(j2)', 'cos(j3)', 'sin(j3)', 'cos(j4)', 'sin(j4)']
+
 
 def compute_jacobian(model, X, epsilon=1e-5):
     """
@@ -42,10 +69,9 @@ def compute_jacobian(model, X, epsilon=1e-5):
 if __name__ == "__main__":
 
     # Load the validation data
-    val_data = pd.read_csv('dataset/validation/r2.csv', delimiter=';')
+    val_data = pd.read_csv(validation_path, delimiter=';')
     val_data.columns = val_data.columns.str.strip()  # Remove leading/trailing whitespace from column names
 
-    target_values = ['ee_x', 'ee_y', 'ee_qw', 'ee_qz']
     X_val = val_data.drop(columns=target_values)
     Y_val = val_data[target_values]
 
@@ -53,7 +79,7 @@ if __name__ == "__main__":
     Y_val = Y_val.to_numpy()
 
     # Load the trained model
-    clf = load('svm_r2.joblib')
+    model = load(model_path)
 
     
     # get a random data point from the validation set
@@ -62,19 +88,19 @@ if __name__ == "__main__":
     Y = Y_val[idx]
 
     max_iter = 10000
-    learning_rate = 0.01
+    eta = 0.01
 
     # get the initial X
-    X_0 = X_val[0]
+    X_i = X_val[0]
     
     # find iteratively X that provides the same Y
     for i in range(max_iter):
 
         # Compute the Jacobian of the model with respect to input X
-        J = compute_jacobian(clf, X_0)
+        J = compute_jacobian(model, X_i)
         
         # Compute the difference between predicted and actual values
-        Y_pred = clf.predict(X_0.reshape(1, -1)).flatten()
+        Y_pred = model.predict(X_i.reshape(1, -1)).flatten()
         error = Y_pred - Y 
 
         if np.linalg.norm(error) < 10e-4:
@@ -87,22 +113,22 @@ if __name__ == "__main__":
 
         #check if the Jacobian is singular
         if np.linalg.matrix_rank(J) < J.shape[0]:
-            X_0 = X_0 - learning_rate * np.dot(J.T, error) # Gradient descent
+            X_i = X_i - eta * np.dot(J.T, error) # Gradient descent
         else:
-            X_0 = X_0 -  learning_rate*np.linalg.pinv(J) @ error # Newton's method
+            X_i = X_i -  eta * np.linalg.pinv(J) @ error # Newton's method
 
 
 
 
     #compare the predicted and actual values
     print("X: ", X)
-    print("X_inv: ", X_0)
+    print("X_i: ", X_i)
 
     np.set_printoptions(suppress=True)
-    print("Predicted Y in X: ", clf.predict(X.reshape(1, -1)).flatten())
-    print("Predicted Y in X_inv: ", clf.predict(X_0.reshape(1, -1)).flatten())
+    print("Predicted Y in X: ", model.predict(X.reshape(1, -1)).flatten())
+    print("Predicted Y in X_i: ", model.predict(X_i.reshape(1, -1)).flatten())
     print("Y: ", Y)
 
-    print("Error: %.5f " % np.linalg.norm(clf.predict(X_0.reshape(1, -1)).flatten() - Y))
+    print("Error: %.5f " % np.linalg.norm(model.predict(X_i.reshape(1, -1)).flatten() - Y))
 
     sys.exit(0)

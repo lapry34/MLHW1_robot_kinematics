@@ -4,8 +4,37 @@ import tensorflow as tf
 from tensorflow import keras
 import sys
 
+#force tensorflow to use CPU
+tf.config.set_visible_devices([], 'GPU')
 
-#input and output dimensions
+robot = 'r3' # r3 or r5
+tuned = False
+
+# Paths
+model_path = ''
+
+#choose the model path
+if tuned:
+    model_path = 'model_' + robot + '_tuned.keras'
+else:
+    model_path = 'model_' + robot + '.keras'
+
+# validation path for the robot
+validation_path = 'dataset/validation/' + robot + '.csv'
+
+target_values = list()
+trigonometric_values = list()
+
+if robot == 'r2':
+    target_values = ['ee_x', 'ee_y', 'ee_qw', 'ee_qz']
+    trigonometric_values = ['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)']
+elif robot == 'r3':
+    target_values = ['ee_x', 'ee_y', 'ee_qw', 'ee_qz']
+    trigonometric_values = ['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)', 'cos(j2)', 'sin(j2)']
+elif robot == 'r5':
+    target_values = ['ee_x', 'ee_y', 'ee_z', 'ee_qw', 'ee_qx', 'ee_qy', 'ee_qz']
+    trigonometric_values = ['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)', 'cos(j2)', 'sin(j2)', 'cos(j3)', 'sin(j3)', 'cos(j4)', 'sin(j4)']
+
 input_dim = None
 output_dim = None
 
@@ -27,17 +56,15 @@ def jacobian(model, x):
 
 if __name__ == "__main__":
     # Load the trained model
-    model = keras.models.load_model('model_r2.keras')
+    model = keras.models.load_model(model_path)
 
     #get the input and output dimensions
     input_dim = model.input_shape[1]
     output_dim = model.output_shape[1]
 
     # Load the data and prepare it as in the original script
-    data = pd.read_csv('dataset/data/dataset_r2.csv', delimiter=';')
+    data = pd.read_csv(validation_path, delimiter=';')
     data.columns = data.columns.str.strip()  # Remove leading/trailing whitespace from column names
-
-    target_values = ['ee_x', 'ee_y', 'ee_qw', 'ee_qz']
 
     # Split the data into X and Y
     X = data.drop(columns=target_values)
@@ -50,33 +77,6 @@ if __name__ == "__main__":
 
     print(J_nn.numpy())
 
-    '''
-    #compute  the jacobian for the whole dataset one by one and print the percentage of completion
-
-    # -l1s2 -l2s12             -l2s12
-    # l1c1 l2c12                l2c12
-    # 1 1
-
-    #extract from X_sample the values of the joints
-
-    q1, q2 = X_sample.values[0][0], X_sample.values[0][1]
-    l1, l2 = 1, 1
-
-    J_analytical = np.array([[-l1*np.sin(q1) - l2*np.sin(q1+q2), -l2*np.sin(q1+q2)], [l1*np.cos(q1) + l2*np.cos(q1+q2), l2*np.cos(q1+q2)], [1, 1]])
-
-
-    print(J_analytical)
-    '''
-    '''
-    jacobians = []
-    for i, x in enumerate(X.values):
-        J = jacobian(model, tf.constant([x], dtype=tf.float32))
-        jacobians.append(J)
-
-        if i % 1000 == 0:
-            print(f'{i}/{len(X)}')
-              
-    '''
 
 
     sys.exit(0)
