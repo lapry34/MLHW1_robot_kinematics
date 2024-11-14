@@ -57,10 +57,10 @@ if __name__ == "__main__":
     print(model.summary())
 
     # Compile the model
-    model.compile(optimizer='adam', loss='mean_squared_error')
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mean_absolute_error'])
 
     # Train the model
-    model.fit(X_train, Y_train, epochs=15)
+    history = model.fit(X_train, Y_train, epochs=15, validation_data=(X_test, Y_test))
 
     # Evaluate the model
     test_loss = model.evaluate(X_test, Y_test)
