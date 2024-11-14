@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from sklearn.metrics import mean_absolute_error
 import tensorflow as tf
 from tensorflow import keras
 import sys
@@ -63,6 +62,7 @@ def reduce_J(J):
     elif robot == 'r5':
         return J[:3, :5]
 
+
 #analytical jacobian of the robots
 def analytical_jacobian(X):
     if robot == 'r2':
@@ -99,6 +99,24 @@ def analytical_jacobian(X):
 
         #TODO 
         return J
+
+
+def print_all(X, Y, X_i, Y_pred):
+    np.set_printoptions(precision=3, suppress=True)
+    print("X: ", np.round(X, 3))
+    print("X_i: ", np.round(X_i, 3))
+    print("Y: ", np.round(Y, 3))
+    print("Y_pred: ", np.round(Y_pred, 3))
+    print("Error: ", np.round(np.linalg.norm(Y - Y_pred), 3))
+    print("JACOBIANS:")
+    J_analytical_i = analytical_jacobian(X_i)
+    J_num_i = reduce_J(jacobian(model, tf.constant(X_i, dtype=tf.float32)).numpy())
+    print("J_analytical in X_i: ", np.round(J_analytical_i, 3))
+    print("J_num in X_i: ", np.round(J_num_i, 3))
+    print("J_analytical in X: ", np.round(analytical_jacobian(X), 3))
+    print("J_num in X: ", np.round(reduce_J(jacobian(model, tf.constant(X, dtype=tf.float32)).numpy()), 3))
+    print("Error in J(X_i): ", np.round(np.linalg.norm(J_analytical_i - J_num_i), 3))
+    return
 
 
 if __name__ == "__main__":
@@ -158,32 +176,6 @@ if __name__ == "__main__":
         else:
             X_i = X_i -  eta * np.linalg.pinv(J) @ error # Newton's method
 
-
-
-
-    #compare the predicted and actual values
-    print("X: ", X_val.iloc[0].values)
-    print("X_i: ", X_i)
-
-    X_gen_tf = tf.constant(X_gen.reshape(1, -1), dtype=tf.float32)
-    X_i_tf = tf.constant(X_i.reshape(1, -1), dtype=tf.float32)
-
-    np.set_printoptions(suppress=True)
-    print("Predicted Y in X: ", model.predict(X_gen_tf, verbose=0).flatten())
-    print("Predicted Y in X_i: ", model.predict(X_i_tf, verbose=0).flatten())
-    print("Y: ", Y)
-
-    print("Error: %.5f " % np.linalg.norm(model.predict(X_i_tf, verbose=0) - Y))
-
-    J_analytical = analytical_jacobian(X_gen)
-    print("Analytical Jacobian: ", J_analytical)
-    J_num = jacobian(model, X_gen).numpy()
-    J_num = reduce_J(J_num)
-
-    print("Numerical Jacobian: ", J_num)
-
-    #error of computation between the J(acobian
-    J_err = mean_absolute_error(J_analytical, J_num)
-    print("J Error: %.4f " % J_err)
+    print_all(X_gen, Y, X_i, Y_pred)
 
     sys.exit(0)
