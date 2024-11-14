@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sklearn.metrics import mean_absolute_error
 from sklearn.svm import SVR
 from sklearn.multioutput import MultiOutputRegressor
 import sys
@@ -30,6 +31,45 @@ elif robot == 'r3':
 elif robot == 'r5':
     target_values = ['ee_x', 'ee_y', 'ee_z', 'ee_qw', 'ee_qx', 'ee_qy', 'ee_qz']
     trigonometric_values = ['cos(j0)', 'sin(j0)', 'cos(j1)', 'sin(j1)', 'cos(j2)', 'sin(j2)', 'cos(j3)', 'sin(j3)', 'cos(j4)', 'sin(j4)']
+
+#analytical jacobian of the robots
+
+def analytical_jacobian(X):
+    if robot == 'r2':
+
+        theta_1 = X[0]
+        theta_2 = X[1]
+
+        l1 = l2 = 0.1
+
+        J = np.array([[-l1*np.sin(theta_1) - l2*np.sin(theta_1 + theta_2), -l2*np.sin(theta_1 + theta_2)],
+                      [l1*np.cos(theta_1) + l2*np.cos(theta_1 + theta_2), l2*np.cos(theta_1 + theta_2)]])
+        return J
+
+    if robot == 'r3':
+
+        theta_1 = X[0]
+        theta_2 = X[1]
+        theta_3 = X[2]
+
+        l1 = l2 = l3 = 0.1
+
+        J = np.array([
+            [-l1*np.sin(theta_1) - l2*np.sin(theta_1 + theta_2) - l3*np.sin(theta_1 + theta_2 + theta_3), -l2*np.sin(theta_1 + theta_2) - l3*np.sin(theta_1 + theta_2 + theta_3), -l3*np.sin(theta_1 + theta_2 + theta_3)],
+            [l1*np.cos(theta_1) + l2*np.cos(theta_1 + theta_2) + l3*np.cos(theta_1 + theta_2 + theta_3), l2*np.cos(theta_1 + theta_2) + l3*np.cos(theta_1 + theta_2 + theta_3), l3*np.cos(theta_1 + theta_2 + theta_3)]
+        ])
+        return J
+    
+    if robot == 'r5':
+
+        theta = X[:5]
+        l = 0.1
+
+        J = np.zeros(3,5)
+
+        #TODO 
+
+        return J
 
 
 def compute_jacobian(model, X, epsilon=1e-5):
@@ -66,6 +106,14 @@ def compute_jacobian(model, X, epsilon=1e-5):
     
     return jacobian
 
+def reduce_J(J):
+    if robot == 'r2':
+        return J[:2, :2]
+    elif robot == 'r3':
+        return J[:2, :3]
+    elif robot == 'r5':
+        return J[:3, :5]
+
 if __name__ == "__main__":
 
     # Load the validation data
@@ -93,7 +141,7 @@ if __name__ == "__main__":
     Y = Y_val[idx]
 
     max_iter = 10000
-    eta = 0.05
+    eta = 0.1
 
     # get the initial X randomly
     idx = np.random.randint(0, X_val.shape[0])
@@ -136,5 +184,18 @@ if __name__ == "__main__":
     print("Y: ", Y)
 
     print("Error: %.5f " % np.linalg.norm(model.predict(X_i.reshape(1, -1)).flatten() - Y))
+
+
+
+    J_analytical = analytical_jacobian(X)
+    print("Analytical Jacobian: ", J_analytical)
+    J_num = compute_jacobian(model, X)
+    J_num = reduce_J(J_num)
+
+    print("Numerical Jacobian: ", J_num)
+
+    #error of computation between the J(acobian
+    J_err = mean_absolute_error(J_analytical, J_num)
+    print("J Error: %.4f " % J_err)
 
     sys.exit(0)

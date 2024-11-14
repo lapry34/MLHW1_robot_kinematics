@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sklearn.metrics import mean_absolute_error
 import tensorflow as tf
 from tensorflow import keras
 import sys
@@ -53,6 +54,51 @@ def jacobian(model, x):
         tape.watch(x)
         y = FK(model, x)
     return tape.jacobian(y, x)
+
+def reduce_J(J):
+    if robot == 'r2':
+        return J[:2, :2]
+    elif robot == 'r3':
+        return J[:2, :3]
+    elif robot == 'r5':
+        return J[:3, :5]
+
+#analytical jacobian of the robots
+def analytical_jacobian(X):
+    if robot == 'r2':
+
+        theta_1 = X[0]
+        theta_2 = X[1]
+
+        l1 = l2 = 0.1
+
+        J = np.array([[-l1*np.sin(theta_1) - l2*np.sin(theta_1 + theta_2), -l2*np.sin(theta_1 + theta_2)],
+                      [l1*np.cos(theta_1) + l2*np.cos(theta_1 + theta_2), l2*np.cos(theta_1 + theta_2)]])
+        return J
+
+    if robot == 'r3':
+
+        theta_1 = X[0]
+        theta_2 = X[1]
+        theta_3 = X[2]
+
+        l1 = l2 = l3 = 0.1
+
+        J = np.array([
+            [-l1*np.sin(theta_1) - l2*np.sin(theta_1 + theta_2) - l3*np.sin(theta_1 + theta_2 + theta_3), -l2*np.sin(theta_1 + theta_2) - l3*np.sin(theta_1 + theta_2 + theta_3), -l3*np.sin(theta_1 + theta_2 + theta_3)],
+            [l1*np.cos(theta_1) + l2*np.cos(theta_1 + theta_2) + l3*np.cos(theta_1 + theta_2 + theta_3), l2*np.cos(theta_1 + theta_2) + l3*np.cos(theta_1 + theta_2 + theta_3), l3*np.cos(theta_1 + theta_2 + theta_3)]
+        ])
+        return J
+    
+    if robot == 'r5':
+
+        theta = X[:5]
+        l = 0.1
+
+        J = np.zeros(3,5)
+
+        #TODO 
+        return J
 
 
 if __name__ == "__main__":
@@ -128,5 +174,16 @@ if __name__ == "__main__":
     print("Y: ", Y)
 
     print("Error: %.5f " % np.linalg.norm(model.predict(X_i_tf, verbose=0) - Y))
+
+    J_analytical = analytical_jacobian(X_gen)
+    print("Analytical Jacobian: ", J_analytical)
+    J_num = jacobian(model, X_gen).numpy()
+    J_num = reduce_J(J_num)
+
+    print("Numerical Jacobian: ", J_num)
+
+    #error of computation between the J(acobian
+    J_err = mean_absolute_error(J_analytical, J_num)
+    print("J Error: %.4f " % J_err)
 
     sys.exit(0)
