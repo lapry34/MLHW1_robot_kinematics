@@ -101,23 +101,59 @@ def analytical_jacobian(X):
         return J
 
 
-def print_all(X, Y, X_i, Y_pred):
+def print_all(X, Y, X_sol, Y_pred):
     np.set_printoptions(precision=3, suppress=True)
     print("X: ", np.round(X, 3))
-    print("X_i: ", np.round(X_i, 3))
+    print("X_sol: ", np.round(X_sol, 3))
     print("Y: ", np.round(Y, 3))
     print("Y_pred: ", np.round(Y_pred, 3))
     print("Error: ", np.round(np.linalg.norm(Y - Y_pred), 3))
     print("JACOBIANS:")
-    J_analytical_i = analytical_jacobian(X_i)
-    J_num_i = reduce_J(jacobian(model, tf.constant(X_i, dtype=tf.float32)).numpy())
-    print("J_analytical in X_i: ", np.round(J_analytical_i, 3))
-    print("J_num in X_i: ", np.round(J_num_i, 3))
+    J_analytical_sol = analytical_jacobian(X_sol)
+    J_num_sol = reduce_J(jacobian(model, tf.constant(X_sol, dtype=tf.float32)).numpy())
+    print("J_analytical in X_sol: ", np.round(J_analytical_sol, 3))
+    print("J_num in X_sol: ", np.round(J_num_sol, 3))
     print("J_analytical in X: ", np.round(analytical_jacobian(X), 3))
     print("J_num in X: ", np.round(reduce_J(jacobian(model, tf.constant(X, dtype=tf.float32)).numpy()), 3))
-    print("Error in J(X_i): ", np.round(np.linalg.norm(J_analytical_i - J_num_i), 3))
+    print("Error in J(X_sol): ", np.round(np.linalg.norm(J_analytical_sol - J_num_sol), 3))
     return
 
+def IK(model, X_i, Y, max_iter=10000, eta=0.05, method='newton', lambda_=0.005): #lambda used if method is levenberg
+    for i in range(max_iter):
+
+        # Compute the Jacobian of the model with respect to input X
+        J = jacobian(model, tf.constant(X_i, dtype=tf.float32))
+        
+        #convert J to numpy
+        J = J.numpy()
+
+        # Predict the output for the current X_i
+        X_i_tf = tf.constant(X_i.reshape(1, -1), dtype=tf.float32)
+        Y_pred = model.predict(X_i_tf, verbose=0).flatten()
+
+        # Compute the difference between predicted and actual values
+        error = Y_pred - Y 
+
+        if np.linalg.norm(error) < 10e-4:
+            print("Converged after ", i, " iterations.")
+            break
+
+        if i % 100 == 0:
+            print("Iteration: ", i, " Error: ", np.linalg.norm(error))
+
+        if method == 'newton':
+            #check if the Jacobian has full rank
+            if np.linalg.matrix_rank(J) < J.shape[0]:
+                X_i = X_i - eta * (J.T @ error) # Gradient descent
+            else:
+                X_i = X_i -  eta * np.linalg.pinv(J) @ error # Newton's method
+        
+        elif method == 'levenberg':
+            # Levenberg-Marquardt update
+            J_levenberg = np.linalg.inv(J.T @ J + lambda_* np.eye(J.shape[1])) @ J.T
+            X_i = X_i - eta * J_levenberg @ error
+
+    return X_i
 
 if __name__ == "__main__":
     # Load the trained model
@@ -148,34 +184,14 @@ if __name__ == "__main__":
     X_i = X_val.iloc[idx].values
 
     # find iteratively X that provides the same Y
-    for i in range(max_iter):
-
-        # Compute the Jacobian of the model with respect to input X
-        J = jacobian(model, tf.constant(X_i, dtype=tf.float32))
-        
-        #convert J to numpy
-        J = J.numpy()
-
-        # Predict the output for the current X_i
-        X_i_tf = tf.constant(X_i.reshape(1, -1), dtype=tf.float32)
-        Y_pred = model.predict(X_i_tf, verbose=0).flatten()
-
-        # Compute the difference between predicted and actual values
-        error = Y_pred - Y 
-
-        if np.linalg.norm(error) < 10e-4:
-            print("Converged after ", i, " iterations.")
-            break
-
-        if i % 100 == 0:
-            print("Iteration: ", i, " Error: ", np.linalg.norm(error))
-
-        #check if the Jacobian has full rank
-        if np.linalg.matrix_rank(J) < J.shape[0]:
-            X_i = X_i - eta * (J.T @ error) # Gradient descent
-        else:
-            X_i = X_i -  eta * np.linalg.pinv(J) @ error # Newton's method
-
-    print_all(X_gen, Y, X_i, Y_pred)
-
+    print("Newton Method")
+    X_sol = IK(model, X_i, Y, max_iter, eta, method='newton')
+    Y_sol = model.predict(X_sol.reshape(1, -1)).flatten()
+    print_all(X_gen, Y, X_i, Y_sol)
+    print("---------------------------------")
+    print("Levenberg-Marquardt Method")
+    X_sol = IK(model, X_i, Y, max_iter, eta, method='levenberg')
+    Y_sol = model.predict(X_sol.reshape(1, -1)).flatten()
+    print_all(X_gen, Y, X_i, Y_sol)
+    
     sys.exit(0)

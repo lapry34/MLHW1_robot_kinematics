@@ -73,18 +73,7 @@ def analytical_jacobian(X):
 
 
 def compute_jacobian(model, X, epsilon=1e-6):
-    """
-    Compute the Jacobian of a MultiOutputRegressor with respect to input X using finite differences.
-    
-    Parameters:
-    - model: Trained MultiOutputRegressor.
-    - X: Input data point (1D array) for which the Jacobian is computed.
-    - epsilon: Small number to compute the finite difference.
-    
-    Returns:
-    - jacobian: 2D numpy array with shape (n_outputs, n_features), representing
-                the Jacobian matrix of partial derivatives.
-    """
+
     n_outputs = len(model.estimators_)
     n_features = X.shape[0]
     jacobian = np.zeros((n_outputs, n_features))
@@ -131,7 +120,7 @@ def print_all(X, Y, X_sol, Y_pred):
     print("Error in J(X_sol): ", np.round(np.linalg.norm(J_analytical_sol - J_num_sol), 3))
     return
 
-def IK(model, X_i, Y, max_iter=1000, eta=0.05, method='newton', lambda_=0.005): #lambda used if method is levenberg
+def IK(model, X_i, Y, max_iter=10000, eta=0.05, method='newton', lambda_=0.005): #lambda used if method is levenberg
     
     # Iterate to find X such that model(X) ≈ Y
     for i in range(max_iter):
@@ -162,8 +151,8 @@ def IK(model, X_i, Y, max_iter=1000, eta=0.05, method='newton', lambda_=0.005): 
 
         elif method == 'levenberg':
             # Levenberg-Marquardt update
-            J_pseudo_inv = np.linalg.pinv(J.T @ J + lambda_* np.eye(J.shape[1])) @ J.T
-            X_i = X_i - eta * J_pseudo_inv @ error
+            J_levenberg = np.linalg.inv(J.T @ J + lambda_* np.eye(J.shape[1])) @ J.T
+            X_i = X_i - eta * J_levenberg @ error
 
     return X_i
 
