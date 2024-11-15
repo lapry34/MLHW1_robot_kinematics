@@ -72,7 +72,7 @@ def analytical_jacobian(X):
         return J
 
 
-def compute_jacobian(model, X, epsilon=1e-5):
+def compute_jacobian(model, X, epsilon=1e-6):
     """
     Compute the Jacobian of a MultiOutputRegressor with respect to input X using finite differences.
     
@@ -114,22 +114,58 @@ def reduce_J(J):
     elif robot == 'r5':
         return J[:3, :5]
     
-def print_all(X, Y, X_i, Y_pred):
+def print_all(X, Y, X_sol, Y_pred):
     np.set_printoptions(precision=3, suppress=True)
     print("X: ", np.round(X, 3))
-    print("X_i: ", np.round(X_i, 3))
+    print("X_sol: ", np.round(X_sol, 3))
     print("Y: ", np.round(Y, 3))
     print("Y_pred: ", np.round(Y_pred, 3))
     print("Error: ", np.round(np.linalg.norm(Y - Y_pred), 3))
     print("JACOBIANS:")
-    J_analytical_i = analytical_jacobian(X_i)
-    J_num_i = reduce_J(compute_jacobian(model, X_i))
-    print("J_analytical in X_i: ", np.round(J_analytical_i, 3))
-    print("J_num in X_i: ", np.round(J_num_i, 3))
+    J_analytical_sol = analytical_jacobian(X_sol)
+    J_num_sol = reduce_J(compute_jacobian(model, X_sol))
+    print("J_analytical in X_sol: ", np.round(J_analytical_sol, 3))
+    print("J_num in X_sol: ", np.round(J_num_sol, 3))
     print("J_analytical in X: ", np.round(analytical_jacobian(X), 3))
     print("J_num in X: ", np.round(reduce_J(compute_jacobian(model, X)), 3))
-    print("Error in J(X_i): ", np.round(np.linalg.norm(J_analytical_i - J_num_i), 3))
+    print("Error in J(X_sol): ", np.round(np.linalg.norm(J_analytical_sol - J_num_sol), 3))
     return
+
+def IK(model, X_i, Y, max_iter=1000, eta=0.05, method='newton', lambda_=0.005): #lambda used if method is levenberg
+    
+    # Iterate to find X such that model(X) ≈ Y
+    for i in range(max_iter):
+
+        # Compute the Jacobian of the model with respect to input X
+        J = compute_jacobian(model, X_i)
+
+        # Compute the difference between predicted and actual values
+        Y_pred = model.predict(X_i.reshape(1, -1)).flatten()
+        error = Y_pred - Y 
+
+        # Check convergence
+        if np.linalg.norm(error) < 1e-4:
+            print("Converged after", i, "iterations.")
+            break
+
+        # Log progress
+        if i % 100 == 0:
+            print("Iteration:", i, "Error:", np.linalg.norm(error))
+
+        # Update rule for different methods
+        if method == 'newton':
+            # Check if the Jacobian has full rank
+            if np.linalg.matrix_rank(J) < J.shape[0]:
+                X_i = X_i - eta * (J.T @ error)  # Gradient descent fallback
+            else:
+                X_i = X_i - eta * np.linalg.pinv(J) @ error  # Newton's method
+
+        elif method == 'levenberg':
+            # Levenberg-Marquardt update
+            J_pseudo_inv = np.linalg.pinv(J.T @ J + lambda_* np.eye(J.shape[1])) @ J.T
+            X_i = X_i - eta * J_pseudo_inv @ error
+
+    return X_i
 
 if __name__ == "__main__":
 
@@ -157,47 +193,23 @@ if __name__ == "__main__":
     X = X_val[idx]
     Y = Y_val[idx]
 
-    max_iter = 10000
-    eta = 0.1
-
-    # get the initial X randomly
     idx = np.random.randint(0, X_val.shape[0])
     X_i = X_val[idx]
-    
-    # find iteratively X that provides the same Y
-    for i in range(max_iter):
-
-        # Compute the Jacobian of the model with respect to input X
-        J = compute_jacobian(model, X_i)
-        
-        # Compute the difference between predicted and actual values
-        Y_pred = model.predict(X_i.reshape(1, -1)).flatten()
-        error = Y_pred - Y 
-
-        if np.linalg.norm(error) < 10e-4:
-            print("Converged after ", i, " iterations.")
-            break
-
-
-        if i % 100 == 0:
-            print("Iteration: ", i, " Error: ", np.linalg.norm(error))
-
-        #check if the Jacobian has full rank
-        if np.linalg.matrix_rank(J) < J.shape[0]:
-            X_i = X_i - eta * (J.T @ error) # Gradient descent
-        else:
-            X_i = X_i -  eta * np.linalg.pinv(J) @ error # Newton's method
-
-    print("Using our method (Newton's method or Gradient Descent)")
-    print_all(X, Y, X_i, model.predict(X_i.reshape(1, -1)).flatten())
+   
+    X_sol = IK(model, X_i, Y, method='newton')
+    print("Using our method (Newton's method)")
+    print_all(X, Y, X_sol, model.predict(X_sol.reshape(1, -1)).flatten())
+    print("-----------------")
+    print("Using our method (Levenberg-Marquardt)")
+    X_sol = IK(model, X_i, Y, method='levenberg')
+    print_all(X, Y, X_sol, model.predict(X_sol.reshape(1, -1)).flatten())
     print("-----------------")
     print("Using Scipy optimization BFGS")
-    X_i = X_val[idx] #same initial point
     def error(X, model, Y):
         return np.linalg.norm(model.predict(X.reshape(1, -1)).flatten() - Y)
     
     res = optimize.minimize(error, X_i, args=(model, Y), method='BFGS', options={'disp': False})
-    X_i = res.x
-    print_all(X, Y, X_i, model.predict(X_i.reshape(1, -1)).flatten())
+    X_sol = res.x
+    print_all(X, Y, X_sol, model.predict(X_sol.reshape(1, -1)).flatten())
 
     sys.exit(0)
