@@ -13,7 +13,7 @@ tf.config.set_visible_devices([], 'GPU')
 robot = 'r5' # r3 or r5
 
 # Paths
-model_path = 'model_' + robot + '_tuned.keras'
+model_path = 'models/model_' + robot + '_tuned.keras'
 dataset_path = 'dataset/data/dataset_' + robot + '.csv'
 
 target_values = list()

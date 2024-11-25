@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore", message="X does not have valid feature names")
 robot = 'r3' # r3 or r5
 
 # Paths
-model_path = 'svm_' + robot + '.joblib'
+model_path = 'models/svm_' + robot + '.joblib'
 
 # validation path for the robot
 validation_path = 'dataset/validation/' + robot + '.csv'
