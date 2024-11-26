@@ -38,20 +38,32 @@ elif robot == 'r5':
 input_dim = None
 output_dim = None
 
-def FK(model, theta):
+def FK(model, theta, i_dim=None, o_dim=None):
+
+    #get the input and output dimensions
+    if i_dim is None or o_dim is None:
+        i_dim = input_dim
+        o_dim = output_dim
+        
     #reshape to batch size 1
-    t = tf.reshape(theta, (1, input_dim)) 
+    t = tf.reshape(theta, (1, i_dim)) 
     #predict
     out = model(t)
     #reshape to 1D vector
-    out = tf.reshape(out, (output_dim,)) 
+    out = tf.reshape(out, (o_dim,)) 
     return out
 
 @tf.function
-def jacobian(model, x):
+def jacobian(model, x, i_dim=None, o_dim=None):
+
+    #get the input and output dimensions
+    if i_dim is None or o_dim is None:
+        i_dim = input_dim
+        o_dim = output_dim
+
     with tf.GradientTape() as tape:
         tape.watch(x)
-        y = FK(model, x)
+        y = FK(model, x, i_dim, o_dim)
     return tape.jacobian(y, x)
 
 def reduce_J(J):
@@ -95,7 +107,7 @@ def analytical_jacobian(X):
         theta = X[:5]
         l = 0.1
 
-        J = np.zeros(3,5)
+        J = np.zeros(shape=(3, 5))
 
         #TODO 
         return J
@@ -118,27 +130,40 @@ def print_all(X, Y, X_sol, Y_pred):
     print("Error in J(X_sol): ", np.round(np.linalg.norm(J_analytical_sol - J_num_sol), 3))
     return
 
-def IK(model, X_i, Y, max_iter=10000, eta=0.05, method='newton', lambda_=0.005): #lambda used if method is levenberg
+def IK(model, X_i, Y, max_iter=10000, eta=0.05, method='newton', lambda_=0.005, orientation=True, verbose=False): #lambda used if method is levenberg
+
+    X_i = np.float32(X_i)
+    Y = np.float32(Y)
+
+    #row vectors
+    i_dim = X_i.shape[0]
+    o_dim = Y.shape[0]
+
     for i in range(max_iter):
 
-        # Compute the Jacobian of the model with respect to input X
-        J = jacobian(model, tf.constant(X_i, dtype=tf.float32))
-        
-        #convert J to numpy
-        J = J.numpy()
+        #convert X_i to tensor
+        X_i_tf = tf.convert_to_tensor(X_i, dtype=tf.float32)
 
         # Predict the output for the current X_i
-        X_i_tf = tf.constant(X_i.reshape(1, -1), dtype=tf.float32)
-        Y_pred = model.predict(X_i_tf, verbose=0).flatten()
+        Y_pred = FK(model, X_i_tf, i_dim, o_dim).numpy().flatten()
+
+        # Compute the Jacobian of the model with respect to input X
+        J = jacobian(model, X_i_tf, i_dim, o_dim).numpy()
 
         # Compute the difference between predicted and actual values
-        error = Y_pred - Y 
+        error = Y_pred - Y  # Convert Y_pred to numpy for error calculation
+
+        if orientation == False: #if we are not interested in the orientation
+            n_joints = int(robot[1])
+            #put the orientation error values to zero
+            error[n_joints:] = 0
 
         if np.linalg.norm(error) < 10e-4:
-            print("Converged after ", i, " iterations.")
-            break
+            if verbose:
+                print("Converged after ", i, " iterations.")
+            return X_i
 
-        if i % 100 == 0:
+        if i % 100 == 0 and verbose:
             print("Iteration: ", i, " Error: ", np.linalg.norm(error))
 
         if method == 'newton':
@@ -153,7 +178,9 @@ def IK(model, X_i, Y, max_iter=10000, eta=0.05, method='newton', lambda_=0.005):
             J_levenberg = np.linalg.inv(J.T @ J + lambda_* np.eye(J.shape[1])) @ J.T
             X_i = X_i - eta * J_levenberg @ error
 
-    return X_i
+    #warning!
+    print("Warning: Did not converge within the maximum number of iterations.")
+    return X_i 
 
 if __name__ == "__main__":
     # Load the trained model
@@ -185,13 +212,13 @@ if __name__ == "__main__":
 
     # find iteratively X that provides the same Y
     print("Newton Method")
-    X_sol = IK(model, X_i, Y, max_iter, eta, method='newton')
-    Y_sol = model.predict(X_sol.reshape(1, -1)).flatten()
+    X_sol = IK(model, X_i, Y, max_iter, eta, method='newton', verbose=True)
+    Y_sol = model.predict(X_sol.reshape(1, -1), verbose=0).flatten()
     print_all(X_gen, Y, X_i, Y_sol)
     print("---------------------------------")
     print("Levenberg-Marquardt Method")
-    X_sol = IK(model, X_i, Y, max_iter, eta, method='levenberg')
-    Y_sol = model.predict(X_sol.reshape(1, -1)).flatten()
+    X_sol = IK(model, X_i, Y, max_iter, eta, method='levenberg', verbose=True)
+    Y_sol = model.predict(X_sol.reshape(1, -1), verbose=0).flatten()
     print_all(X_gen, Y, X_i, Y_sol)
     
     sys.exit(0)
