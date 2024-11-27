@@ -11,7 +11,7 @@ import warnings
 warnings.filterwarnings("ignore", message="X does not have valid feature names")
 
 
-robot = 'r3' # r3 or r5
+robot = 'r5' # r3 or r5
 
 # Paths
 model_path = 'models/svm_' + robot + '.joblib'
@@ -120,7 +120,7 @@ def print_all(X, Y, X_sol, Y_pred):
     print("Error in J(X_sol): ", np.round(np.linalg.norm(J_analytical_sol - J_num_sol), 3))
     return
 
-def IK(model, X_i, Y, max_iter=10000, eta=0.05, method='newton', lambda_=0.005): #lambda used if method is levenberg
+def IK(model, X_i, Y, max_iter=10000, eta=0.05, method='newton', lambda_=0.005, orientation=True, verbose=False): #lambda used if method is levenberg
     
     # Iterate to find X such that model(X) ≈ Y
     for i in range(max_iter):
@@ -132,13 +132,19 @@ def IK(model, X_i, Y, max_iter=10000, eta=0.05, method='newton', lambda_=0.005):
         Y_pred = model.predict(X_i.reshape(1, -1)).flatten()
         error = Y_pred - Y 
 
+        if orientation == False: #if we are not interested in the orientation
+            n_joints = int(robot[1])
+            #put the orientation error values to zero
+            error[n_joints:] = 0
+
         # Check convergence
-        if np.linalg.norm(error) < 1e-4:
-            print("Converged after", i, "iterations.")
-            break
+        if np.linalg.norm(error) < 10e-4:
+            if verbose:
+                print("Converged after", i, "iterations.")
+            return X_i
 
         # Log progress
-        if i % 100 == 0:
+        if i % 100 == 0 and verbose:
             print("Iteration:", i, "Error:", np.linalg.norm(error))
 
         # Update rule for different methods
@@ -154,7 +160,9 @@ def IK(model, X_i, Y, max_iter=10000, eta=0.05, method='newton', lambda_=0.005):
             J_levenberg = np.linalg.inv(J.T @ J + lambda_* np.eye(J.shape[1])) @ J.T
             X_i = X_i - eta * J_levenberg @ error
 
-    return X_i
+    #warning!
+    print("Warning: IK Did not converge within the maximum number of iterations.")
+    return X_i 
 
 if __name__ == "__main__":
 

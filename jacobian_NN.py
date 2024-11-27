@@ -179,7 +179,7 @@ def IK(model, X_i, Y, max_iter=10000, eta=0.05, method='newton', lambda_=0.005, 
             X_i = X_i - eta * J_levenberg @ error
 
     #warning!
-    print("Warning: Did not converge within the maximum number of iterations.")
+    print("Warning: IK Did not converge within the maximum number of iterations.")
     return X_i 
 
 if __name__ == "__main__":
