@@ -8,7 +8,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 #set robot to r2, r3, or r5
-robot = 'r3' 
+robot = 'r5' 
 tuned = True
 
 # Paths
