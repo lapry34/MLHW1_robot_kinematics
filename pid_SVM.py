@@ -3,26 +3,20 @@ import gymnasium as gym
 from dataset.envs.reacher_v6 import ReacherEnv  # Assumes ReacherEnv is already implemented
 from dataset.envs.reacher3_v6 import Reacher3Env
 from dataset.envs.marrtino_arm import MARRtinoArmEnv
-from jacobian_NN import IK
-import tensorflow as tf
-from tensorflow import keras
+from sklearn.multioutput import MultiOutputRegressor
+from jacobian_svm import IK
+from joblib import load
+import warnings
 
-#set robot to r2, r3, or r5
-robot = 'r3' 
-tuned = True
+# Suppress specific UserWarning
+warnings.filterwarnings("ignore", message="X does not have valid feature names")
+
+
+robot = 'r3' # r3 or r5
 
 # Paths
-model_path = ''
+model_path = 'models/svm_' + robot + '.joblib'
 
-#choose the model path
-if tuned:
-    model_path = 'models/model_' + robot + '_tuned.keras'
-else:
-    model_path = 'models/model_' + robot + '.keras'
-
-
-#force tensorflow to use CPU
-tf.config.set_visible_devices([], 'GPU')
 
 def get_env(robot=''):
     if robot == 'r2':
@@ -58,11 +52,11 @@ class RobotController:
     def __init__(self, env, model_path, dt=0.01):
         self.env = env
         self.dt = dt
-        self.model = keras.models.load_model(model_path)
+        self.model = load(model_path)
 
         # Get the input and output dimensions of the model
-        self.input_dim = self.model.input_shape[1]
-        self.output_dim = self.model.output_shape[1]
+        self.input_dim = self.model.n_features_in_
+        self.output_dim = len(self.model.estimators_)
 
         self.pid_controllers = [PIDController(Kp=1, Ki=0.01, Kd=0.1, dt=self.dt) for _ in range(env.njoints)]
 
@@ -81,7 +75,7 @@ class RobotController:
         init_joints = np.concatenate((init_joints, np.cos(init_joints), np.sin(init_joints)), axis=0)
 
         # Call the IK function
-        target_joints = IK(self.model, init_joints, target_position, orientation=False, verbose=verbose)
+        target_joints = IK(self.model, init_joints, target_position, eta=0.01, orientation=False, verbose=verbose)
 
         #normalize in -pi, pi the target joints
         target_joints = np.array([((j + np.pi) % (2 * np.pi)) - np.pi for j in target_joints])
@@ -130,14 +124,14 @@ if __name__ == "__main__":
     robot_controller = RobotController(env, model_path, dt=0.01)
 
     # Set a target position (e.g., [0.1, 0.1] for 2D)
-    target_position = [0.05, 0.07]
+    target_position = [0.06, 0.1]
 
     if env.njoints == 5: #R5 robot
         target_position.append(0.2)
 
     #use the IK to get the joint angles
     print("Using Inverse Kinematics to compute target joints...")
-    target_joints = robot_controller.compute_joint_angles(target_position)
+    target_joints = robot_controller.compute_joint_angles(target_position, verbose=True)
     print("Target Joints: ", target_joints)
 
     # Apply the control to reach the target position
