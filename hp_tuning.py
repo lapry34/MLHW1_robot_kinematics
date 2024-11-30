@@ -35,9 +35,9 @@ def build_model(hp):
     # Hyperparameters to tune
     hp_units_1 = hp.Int('units_1', min_value=8, max_value=64, step=8)
     hp_units_2 = hp.Int('units_2', min_value=8, max_value=64, step=8)
-    hp_activation = hp.Choice('activation', values=['relu', 'sigmoid', 'tanh'])
+    hp_activation = hp.Choice('activation', values=['relu'])
     hp_learning_rate = hp.Float('learning_rate', min_value=1e-4, max_value=1e-2, sampling='log')
-    hp_regularization_factor = hp.Float('regularization_factor', min_value=1e-6, max_value=1e-2, sampling='log')
+    hp_regularization_factor = hp.Float('regularization_factor', min_value=1e-6, max_value=1e-6, sampling='log')
 
     # Create the model
     model = keras.Sequential([

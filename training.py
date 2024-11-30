@@ -10,14 +10,24 @@ import sys
 #force tensorflow to use CPU
 tf.config.set_visible_devices([], 'GPU')
 
-robot = 'r5' # r3 or r5
+robot = 'r3' # r3 or r5
+tuned = True 
 
 # Paths
-model_path = 'models/NN/model_' + robot + '.keras'
+model_path = ''
+
+#choose the model path
+if tuned:
+    model_path = 'models/NN/model_' + robot + '_tuned.keras'
+else:
+    model_path = 'models/NN/model_' + robot + '.keras'
+    
 dataset_path = 'dataset/data/dataset_' + robot + '.csv'
 
 target_values = list()
 trigonometric_values = list()
+
+
 
 if robot == 'r2':
     target_values = ['ee_x', 'ee_y', 'ee_qw', 'ee_qz']
@@ -47,10 +57,21 @@ if __name__ == "__main__":
 
     regularization_factor = 10e-6 #L2 regularization factor
 
+    n1, n2 = (None, None) 
+
+    if tuned == False:
+        n1, n2 = (64, 64)
+    if robot == 'r2':       
+        n1, n2 = (64, 24)
+    elif robot == 'r3':
+        n1, n2 = (64, 40)
+    elif robot == 'r5':
+        n1, n2 = (48, 64)
+
     # Create the model
     model = keras.Sequential([
-        keras.layers.Dense(64, input_shape=(X_train.shape[1],), activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
-        keras.layers.Dense(64, activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
+        keras.layers.Dense(n1, input_shape=(X_train.shape[1],), activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
+        keras.layers.Dense(n2, activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
         #keras.layers.Dropout(0.2),
         keras.layers.Dense(len(target_values))
     ])

@@ -10,7 +10,7 @@ import sys
 tf.config.set_visible_devices([], 'GPU')
 
 robot = 'r3' # r3 or r5
-tuned = False
+tuned = True 
 
 # Paths
 model_path = ''
