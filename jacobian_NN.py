@@ -66,7 +66,7 @@ def jacobian(model, x, i_dim=None, o_dim=None):
         y = FK(model, x, i_dim, o_dim)
     return tape.jacobian(y, x)
 
-def reduce_J(J):
+def reduce_J(J, robot=robot):
     if robot == 'r2':
         return J[:2, :2]
     elif robot == 'r3':
@@ -76,7 +76,7 @@ def reduce_J(J):
 
 
 #analytical jacobian of the robots
-def analytical_jacobian(X):
+def analytical_jacobian(X, robot=robot):
     if robot == 'r2':
 
         theta_1 = X[0]

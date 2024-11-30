@@ -34,7 +34,7 @@ elif robot == 'r5':
 
 #analytical jacobian of the robots
 
-def analytical_jacobian(X):
+def analytical_jacobian(X, robot=robot):
     if robot == 'r2':
 
         theta_1 = X[0]
@@ -95,7 +95,7 @@ def compute_jacobian(model, X, epsilon=1e-6):
     
     return jacobian
 
-def reduce_J(J):
+def reduce_J(J, robot=robot):
     if robot == 'r2':
         return J[:2, :2]
     elif robot == 'r3':
