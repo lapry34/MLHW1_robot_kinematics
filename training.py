@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+from MAPE import mean_absolute_percentage_error
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow import keras
@@ -77,14 +78,18 @@ if __name__ == "__main__":
     # Evaluate the model on test set
     MSE = mean_squared_error(Y_test, Y_pred)  # Calculate mean squared error
     MAE = mean_absolute_error(Y_test, Y_pred)  # Calculate mean absolute error
+    MAPE = mean_absolute_percentage_error(Y_test, Y_pred)  # Calculate mean absolute percentage error
 
     print("TEST:")
 
-    # Print the test loss
+    # Print the MSE and RMSE
     print('Mean Squared Error:', MSE)
     print('Root Mean Squared Error:', np.sqrt(MSE))
 
     # Print the MAE
     print('Mean Absolute Error:', MAE)
+
+    # Print the MAPE
+    print('Mean Absolute Percentage Error: %.3f%%' % (MAPE))
 
     sys.exit(0)
