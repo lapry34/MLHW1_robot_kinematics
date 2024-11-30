@@ -10,7 +10,20 @@ import matplotlib.pyplot as plt
 # Force TensorFlow to use CPU
 tf.config.set_visible_devices([], 'GPU')
 
-robot = 'r2'  # Options: 'r2', 'r3', 'r5'
+robot = 'r5'  # Options: 'r2', 'r3', 'r5'
+
+tuned = True
+
+n1, n2 = (None, None) 
+
+if tuned == False:
+    n1, n2 = (64, 64)
+if robot == 'r2':       
+    n1, n2 = (64, 24)
+elif robot == 'r3':
+    n1, n2 = (64, 40)
+elif robot == 'r5':
+    n1, n2 = (48, 64)
 
 # Paths
 model_base_path = 'models/NN/perc/'
@@ -59,9 +72,9 @@ if __name__ == "__main__":
     # Fixed model parameters
     regularization_factor = 1e-5  # L2 regularization factor
     model = keras.Sequential([
-        keras.layers.Dense(64, input_shape=(X_train.shape[1],), activation='relu', 
+        keras.layers.Dense(n1, input_shape=(X_train.shape[1],), activation='relu', 
                            kernel_regularizer=keras.regularizers.l2(regularization_factor)),
-        keras.layers.Dense(64, activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
+        keras.layers.Dense(n2, activation='relu', kernel_regularizer=keras.regularizers.l2(regularization_factor)),
         keras.layers.Dense(len(target_values))
     ])
 
