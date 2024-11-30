@@ -13,7 +13,7 @@ robot = 'r2' # r3 or r5
 hp_search = False
 
 #path 
-model_path = 'models/svm_' + robot + '.joblib'
+model_path = 'models/svm/svm_' + robot + '.joblib'
 
 validation_path = 'dataset/validation/' + robot + '.csv'
 dataset_path = 'dataset/data/dataset_' + robot + '.csv'

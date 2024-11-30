@@ -15,9 +15,9 @@ model_path = ''
 
 #choose the model path
 if tuned:
-    model_path = 'models/model_' + robot + '_tuned.keras'
+    model_path = 'models/NN/model_' + robot + '_tuned.keras'
 else:
-    model_path = 'models/model_' + robot + '.keras'
+    model_path = 'models/NN/model_' + robot + '.keras'
 
 # validation path for the robot
 validation_path = 'dataset/validation/' + robot + '.csv'

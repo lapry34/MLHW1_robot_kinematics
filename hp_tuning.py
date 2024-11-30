@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow import keras
@@ -13,7 +14,7 @@ tf.config.set_visible_devices([], 'GPU')
 robot = 'r5' # r3 or r5
 
 # Paths
-model_path = 'models/model_' + robot + '_tuned.keras'
+model_path = 'models/NN/model_' + robot + '_tuned.keras'
 dataset_path = 'dataset/data/dataset_' + robot + '.csv'
 
 target_values = list()
@@ -98,24 +99,25 @@ if __name__ == "__main__":
     model = tuner.hypermodel.build(best_hps)
     model.fit(X_train, Y_train, validation_split=0.2, epochs=20)
 
-    # Evaluate the model
-    test_loss = model.evaluate(X_test, Y_test)
-
     # Predict
-    y_pred = model.predict(X_test)
+    Y_pred = model.predict(X_test)
     # Round y_pred to 3 decimal values
-    y_pred = np.round(y_pred, 3)
+    Y_pred = np.round(Y_pred, 3)
 
     # Save the model
     model.save(model_path)
 
+    # Evaluate the model on test set
+    MSE = mean_squared_error(Y_test, Y_pred)  # Calculate mean squared error
+    MAE = mean_absolute_error(Y_test, Y_pred)  # Calculate mean absolute error
+
     print("TEST:")
 
     # Print the test loss
-    print('Mean Squared Error:', test_loss)
-    print('Root Mean Squared Error:', np.sqrt(test_loss))
+    print('Mean Squared Error:', MSE)
+    print('Root Mean Squared Error:', np.sqrt(MSE))
 
     # Print the MAE
-    print('Mean Absolute Error:', np.mean(np.abs(Y_test - y_pred)))
+    print('Mean Absolute Error:', MAE)
 
     sys.exit(0)

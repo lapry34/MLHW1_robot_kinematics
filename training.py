@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow import keras
@@ -11,7 +12,7 @@ tf.config.set_visible_devices([], 'GPU')
 robot = 'r5' # r3 or r5
 
 # Paths
-model_path = 'models/model_' + robot + '.keras'
+model_path = 'models/NN/model_' + robot + '.keras'
 dataset_path = 'dataset/data/dataset_' + robot + '.csv'
 
 target_values = list()
@@ -73,13 +74,17 @@ if __name__ == "__main__":
     # Save the model
     model.save(model_path)
 
+    # Evaluate the model on test set
+    MSE = mean_squared_error(Y_test, Y_pred)  # Calculate mean squared error
+    MAE = mean_absolute_error(Y_test, Y_pred)  # Calculate mean absolute error
+
     print("TEST:")
 
     # Print the test loss
-    print('Mean Squared Error:', test_loss) #mse impreciso valori < 1???
-    print('Root Mean Squared Error:', np.sqrt(test_loss)) 
+    print('Mean Squared Error:', MSE)
+    print('Root Mean Squared Error:', np.sqrt(MSE))
 
     # Print the MAE
-    print('Mean Absolute Error:', np.mean(np.abs(Y_test - Y_pred)))
+    print('Mean Absolute Error:', MAE)
 
     sys.exit(0)

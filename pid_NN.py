@@ -16,9 +16,9 @@ model_path = ''
 
 #choose the model path
 if tuned:
-    model_path = 'models/model_' + robot + '_tuned.keras'
+    model_path = 'models/NN/model_' + robot + '_tuned.keras'
 else:
-    model_path = 'models/model_' + robot + '.keras'
+    model_path = 'models/NN/model_' + robot + '.keras'
 
 
 #force tensorflow to use CPU

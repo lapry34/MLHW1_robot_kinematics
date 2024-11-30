@@ -15,7 +15,7 @@ warnings.filterwarnings("ignore", message="X does not have valid feature names")
 robot = 'r3' # r3 or r5
 
 # Paths
-model_path = 'models/svm_' + robot + '.joblib'
+model_path = 'models/svm/svm_' + robot + '.joblib'
 
 
 def get_env(robot=''):

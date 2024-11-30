@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore", message="X does not have valid feature names")
 robot = 'r5' # r3 or r5
 
 # Paths
-model_path = 'models/svm_' + robot + '.joblib'
+model_path = 'models/svm/svm_' + robot + '.joblib'
 
 # validation path for the robot
 validation_path = 'dataset/validation/' + robot + '.csv'
@@ -65,7 +65,7 @@ def analytical_jacobian(X):
         theta = X[:5]
         l = 0.1
 
-        J = np.zeros(3,5)
+        J = np.zeros(shape=(3, 5))
 
         #TODO 
 
