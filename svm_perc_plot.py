@@ -5,10 +5,12 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR
 from sklearn.multioutput import MultiOutputRegressor
-from joblib import dump
+from joblib import dump, load
 from MAPE import mean_absolute_percentage_error
+from jacobian_svm import compute_jacobian, reduce_J, analytical_jacobian
+from sklearn.metrics import mean_absolute_error
 
-robot = 'r5'  # Options: 'r2', 'r3', 'r5'
+robot = 'r2'  # Options: 'r2', 'r3', 'r5'
 
 # Paths
 model_base_path = 'models/svm/perc/'
@@ -42,7 +44,7 @@ if __name__ == "__main__":
 
     # Load the validation data
     validation_data = pd.read_csv(validation_path, delimiter=';')
-    validation_data.columns = validation_data.columns.str.strip()
+    validation_data.columns = data.columns.str.strip()
 
     X_val = validation_data.drop(columns=target_values)
     Y_val = validation_data[target_values]
@@ -51,20 +53,63 @@ if __name__ == "__main__":
     percentages = [0.05, 0.1, 0.25, 0.5, 0.75, 1.0]
 
     # Lists to store results for plotting
-    test_mape = []
     val_mape = []
+    val_jacobian = []
+    test_mape = []
     support_vectors = []
 
     for perc in percentages:
         # Determine the subset of training data
         subset_size = int(len(X_train) * perc)
-        X_train_subset = X_train.iloc[:subset_size]
-        Y_train_subset = Y_train.iloc[:subset_size]
+        model_path = os.path.join(model_base_path, f'svm_{robot}_{int(perc * 100)}.joblib')
 
-        # Define and train a new model
-        svr = SVR(kernel='rbf', C=5, epsilon=0.03, gamma='scale')
-        model = MultiOutputRegressor(svr)
-        model.fit(X_train_subset, Y_train_subset)
+        if os.path.exists(model_path):
+            print(f"Model for {int(perc * 100)}% already exists. Loading...")
+            model = load(model_path)
+        else:
+            print(f"Model for {int(perc * 100)}% not found. Training...")
+            X_train_subset = X_train.iloc[:subset_size]
+            Y_train_subset = Y_train.iloc[:subset_size]
+
+            # Define and train a new model
+            svr = SVR(kernel='rbf', C=5, epsilon=0.03, gamma='scale')
+            model = MultiOutputRegressor(svr)
+            model.fit(X_train_subset, Y_train_subset)
+
+            # Save the model for this percentage
+            dump(model, model_path)
+
+        # Predict on the validation set
+        Y_pred_val = model.predict(X_val)
+
+
+        J_num_list = []
+        J_analytical_list = []
+
+        # Compute the Jacobian of the model with respect to input X
+        i = 0
+        for x in X_val.values:
+            J_num = compute_jacobian(model, x)
+            J_analytical = analytical_jacobian(x, robot)
+            J_num_reduced = reduce_J(J_num, robot)
+            
+            # Flatten and save the Jacobian data
+            J_num_list.append(J_num_reduced.flatten())
+            J_analytical_list.append(J_analytical.flatten())
+            if i % 100 == 0:
+                print(f"Jacobian {i} computed.")
+            if i == 1000:
+                break
+            i += 1
+
+        # Compute the difference between the numerical and analytical Jacobians
+        MAE_jac = mean_absolute_error(J_analytical_list, J_num_list)
+        print(f"Jacobian MAE: {MAE_jac:.4f}")
+        val_jacobian.append(MAE_jac)
+
+        # Evaluate the model on the validation set
+        MAPE_val = mean_absolute_percentage_error(Y_val, Y_pred_val)
+        val_mape.append(MAPE_val)
 
         # Predict on the test set
         Y_pred_test = model.predict(X_test)
@@ -73,49 +118,46 @@ if __name__ == "__main__":
         MAPE_test = mean_absolute_percentage_error(Y_test, Y_pred_test)
         test_mape.append(MAPE_test)
 
-        # Predict on the validation set
-        Y_pred_val = model.predict(X_val)
-
-        # Evaluate the model on the validation set
-        MAPE_val = mean_absolute_percentage_error(Y_val, Y_pred_val)
-        val_mape.append(MAPE_val)
-
         # Calculate the total number of support vectors
         sv = sum(estimator.n_support_ for estimator in model.estimators_)
         support_vectors.append(sv)
 
         print(f"TRAINING SET {int(perc * 100)}%:")
-        print(f"(Test) MAPE: {MAPE_test:.4f}")
         print(f"(Validation) MAPE: {MAPE_val:.4f}")
+        print(f"(Test) MAPE: {MAPE_test:.4f}")
         print(f"Total Support Vectors: {sv}")
 
-        # Save the model for this percentage
-        model_path = os.path.join(model_base_path, f'svm_{robot}_{int(perc * 100)}.joblib')
-        dump(model, model_path)
-
-    # Plot MAPE
+    # Plot MAPE with support vectors above points
     plt.figure(figsize=(10, 6))
-    plt.plot([p * 100 for p in percentages], test_mape, marker='o', label='Test MAPE', linestyle='-')
-    plt.plot([p * 100 for p in percentages], val_mape, marker='o', label='Validation MAPE', linestyle='--')
+    percentages_scaled = [p * 100 for p in percentages]
+    plt.plot(percentages_scaled, test_mape, marker='o', label='Test MAPE', linestyle='-')
+    plt.plot(percentages_scaled, val_mape, marker='o', label='Validation MAPE', linestyle='--')
+    
+    # Add the number of support vectors as labels above the validation points
+    for i, perc in enumerate(percentages_scaled):
+        plt.text(perc, val_mape[i] + 0.5, f"{support_vectors[i]}", ha='center', fontsize=10)
+
     plt.title(f'MAPE for SVM Model ({robot.upper()})')
     plt.xlabel('Percentage of Training Set Used (%)')
     plt.ylabel('Mean Absolute Percentage Error')
     plt.legend()
     plt.grid(True)
-    mape_plot_path = os.path.join(plot_path, f'svm_{robot}_mape.png')
+
+    # Save the plot
+    mape_plot_path = os.path.join(plot_path, f'svm_{robot}_mape_with_sv.png')
     plt.savefig(mape_plot_path)
     print(f"MAPE plot saved to {mape_plot_path}")
-    plt.close()
 
-    # Plot Support Vectors
+    # Plot Jacobian error
     plt.figure(figsize=(10, 6))
-    plt.plot([p * 100 for p in percentages], support_vectors, marker='s', label='Support Vectors', linestyle='-')
-    plt.title(f'Support Vectors for SVM Model ({robot.upper()})')
+    plt.plot([p * 100 for p in percentages], val_jacobian, marker='o', label='Validation Jacobian Error', linestyle='-')
+    plt.title(f'Jacobian Error for Neural Network Model ({robot.upper()})')
     plt.xlabel('Percentage of Training Set Used (%)')
-    plt.ylabel('Number of Support Vectors')
-    plt.legend()
+    plt.ylabel('Mean Absolute Error')
     plt.grid(True)
-    sv_plot_path = os.path.join(plot_path, f'svm_{robot}_support_vectors.png')
-    plt.savefig(sv_plot_path)
-    print(f"Support Vector plot saved to {sv_plot_path}")
+
+    # Plot Jacobian MAE
+    jacobian_plot_path = os.path.join(plot_path, f'svm_{robot}_jacobian.png')
+    plt.savefig(jacobian_plot_path)
+    print(f"Jacobian plot saved to {jacobian_plot_path}")
     plt.close()

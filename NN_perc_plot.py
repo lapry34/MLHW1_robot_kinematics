@@ -1,16 +1,18 @@
 import os
 import numpy as np
 import pandas as pd
+from sklearn.metrics import mean_absolute_error
 from MAPE import mean_absolute_percentage_error
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
+from jacobian_NN import jacobian, reduce_J, analytical_jacobian
 
 # Force TensorFlow to use CPU
 tf.config.set_visible_devices([], 'GPU')
 
-robot = 'r5'  # Options: 'r2', 'r3', 'r5'
+robot = 'r3'  # Options: 'r2', 'r3', 'r5'
 
 tuned = True
 
@@ -68,6 +70,7 @@ if __name__ == "__main__":
     # Lists to store results for plotting
     test_mape = []
     val_mape = []
+    val_jacobian = []
 
     # Fixed model parameters
     regularization_factor = 1e-5  # L2 regularization factor
@@ -103,6 +106,23 @@ if __name__ == "__main__":
         # Predict on the validation set
         Y_pred_val = model.predict(X_val)
 
+        J_num_list = []
+        J_analytical_list = []
+        # Compute the Jacobian of the model with respect to input X
+        for x in X_val.values:
+            J_num = jacobian(model, x, x.shape[0], len(target_values)).numpy()
+            J_analytical = analytical_jacobian(x, robot)
+            J_num_reduced = reduce_J(J_num, robot)
+            
+            # Flatten and save the Jacobian data
+            J_num_list.append(J_num_reduced.flatten())
+            J_analytical_list.append(J_analytical.flatten())
+
+        # Compute the difference between the numerical and analytical Jacobians
+        MAE_jac = mean_absolute_error(J_analytical_list, J_num_list)
+        print(f"Jacobian MAE: {MAE_jac:.4f}")
+        val_jacobian.append(MAE_jac)
+
         # Evaluate the model on the validation set
         MAPE_val = mean_absolute_percentage_error(Y_val, Y_pred_val)
         val_mape.append(MAPE_val)
@@ -133,4 +153,18 @@ if __name__ == "__main__":
     mape_plot_path = os.path.join(plot_path, f'nn_{robot}_mape.png')
     plt.savefig(mape_plot_path)
     print(f"MAPE plot saved to {mape_plot_path}")
+    plt.close()
+
+    # Plot Jacobian error
+    plt.figure(figsize=(10, 6))
+    plt.plot([p * 100 for p in percentages], val_jacobian, marker='o', label='Validation Jacobian Error', linestyle='-')
+    plt.title(f'Jacobian Error for Neural Network Model ({robot.upper()})')
+    plt.xlabel('Percentage of Training Set Used (%)')
+    plt.ylabel('Mean Absolute Error')
+    plt.grid(True)
+
+    # Save the Jacobian plot
+    jacobian_plot_path = os.path.join(plot_path, f'nn_{robot}_jacobian.png')
+    plt.savefig(jacobian_plot_path)
+    print(f"Jacobian plot saved to {jacobian_plot_path}")
     plt.close()

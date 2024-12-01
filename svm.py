@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVR
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import root_mean_squared_error, mean_absolute_error
+from MAPE import mean_absolute_percentage_error
 from sklearn.multioutput import MultiOutputRegressor
 import sys
 from joblib import dump
@@ -80,10 +81,12 @@ if __name__ == "__main__":
     # Evaluate the model on test set
     RMSE = root_mean_squared_error(Y_test, Y_pred)  # Calculate root mean squared error
     MAE = mean_absolute_error(Y_test, Y_pred)
+    MAPE = mean_absolute_percentage_error(Y_test, Y_pred)
 
     print("TEST:")
     print('Root Mean Squared Error:', RMSE)
     print('Mean Absolute Error:', MAE)
+    print('Mean Absolute Percentage Error: %.3f%%' % (MAPE))
 
     # Predict on validation set
     Y_pred = model.predict(X_val)
@@ -92,10 +95,12 @@ if __name__ == "__main__":
     # Evaluate the model on validation set
     RMSE = root_mean_squared_error(Y_val, Y_pred)  # Calculate root mean squared error
     MAE = mean_absolute_error(Y_val, Y_pred)
+    MAPE = mean_absolute_percentage_error(Y_val, Y_pred)
 
     print("VALIDATION:")
     print('Root Mean Squared Error:', RMSE)
     print('Mean Absolute Error:', MAE)
+    print('Mean Absolute Percentage Error: %.3f%%' % (MAPE))
 
     # Print the number of support vectors
     sv = 0
